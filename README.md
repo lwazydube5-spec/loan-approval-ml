@@ -1,4 +1,4 @@
-# Loan Approval Prediction - Production ML System
+![CI](https://github.com/lwazydube5-spec/loan-approval-ml/actions/workflows/ci.yml/badge.svg)
 
 # Loan Approval Prediction — Production ML System
 
