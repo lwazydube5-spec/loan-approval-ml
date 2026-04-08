@@ -4,6 +4,7 @@ An end-to-end machine learning system that predicts whether loan application is 
 --
 ## Project structure
 
+```
 loan_approval/
 ├── data/
 │   ├── train.csv           # 614 labelled applications (not in git)
@@ -17,7 +18,7 @@ loan_approval/
 │   └── predict.py          # Generate predictions on test.csv
 │
 ├── api/
-│   └── serve.py            # FastAPI — /predict, /predict/batch, /health
+│   └── serve.py            # Flask — /predict, /predict/batch, /health
 │
 ├── tests/
 │   └── test_pipeline.py    # 17 automated tests
@@ -27,7 +28,9 @@ loan_approval/
 │   └── model_meta.json     # Threshold, feature names, CV metrics
 │
 ├── requirements.txt
+├── Dockerfile
 └── README.md
+```
 
 ## Quickstart
 
