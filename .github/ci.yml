@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest pytest-cov
+
+      - name: Create sample data for CI
+        run: |
+          python - <<'PYEOF'
+          import pandas as pd
+          import numpy as np
+          import os
+          os.makedirs('data', exist_ok=True)
+          np.random.seed(42)
+          n = 614
+          df = pd.DataFrame({
+              'Loan_ID'           : [f'LP{i:06d}' for i in range(n)],
+              'Gender'            : np.random.choice(['Male', 'Female'], n),
+              'Married'           : np.random.choice(['Yes', 'No'], n),
+              'Dependents'        : np.random.choice(['0', '1', '2', '3+'], n),
+              'Education'         : np.random.choice(['Graduate', 'Not Graduate'], n),
+              'Self_Employed'     : np.random.choice(['Yes', 'No'], n),
+              'ApplicantIncome'   : np.random.randint(1000, 20000, n),
+              'CoapplicantIncome' : np.random.choice([0, 1000, 2000, 3000], n, p=[0.4, 0.2, 0.2, 0.2]),
+              'LoanAmount'        : np.random.randint(50, 500, n).astype(float),
+              'Loan_Amount_Term'  : np.random.choice([360.0, 180.0, 120.0, 60.0], n),
+              'Credit_History'    : np.random.choice([1.0, 0.0, np.nan], n, p=[0.7, 0.15, 0.15]),
+              'Property_Area'     : np.random.choice(['Urban', 'Semiurban', 'Rural'], n),
+              'Loan_Status'       : np.random.choice(['Y', 'N'], n, p=[0.69, 0.31]),
+          })
+          df.to_csv('data/train.csv', index=False)
+          print(f'Created sample data: {df.shape}')
+          PYEOF
+
+      - name: Train model for tests
+        run: python src/train.py
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+
+  build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Create sample data and train model
+        run: |
+          pip install -r requirements.txt
+          python - <<'PYEOF'
+          import pandas as pd
+          import numpy as np
+          import os
+          os.makedirs('data', exist_ok=True)
+          np.random.seed(42)
+          n = 614
+          df = pd.DataFrame({
+              'Loan_ID'           : [f'LP{i:06d}' for i in range(n)],
+              'Gender'            : np.random.choice(['Male', 'Female'], n),
+              'Married'           : np.random.choice(['Yes', 'No'], n),
+              'Dependents'        : np.random.choice(['0', '1', '2', '3+'], n),
+              'Education'         : np.random.choice(['Graduate', 'Not Graduate'], n),
+              'Self_Employed'     : np.random.choice(['Yes', 'No'], n),
+              'ApplicantIncome'   : np.random.randint(1000, 20000, n),
+              'CoapplicantIncome' : np.random.choice([0, 1000, 2000, 3000], n, p=[0.4, 0.2, 0
