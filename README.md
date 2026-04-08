@@ -1,11 +1,17 @@
 # Loan Approval Prediction - Production ML System
 
-An end-to-end machine learning system that predicts whether loan application is approved or not in real time. Built with Python, scikit-learn, Random Forest, FastAPI and Docker.
---
+# Loan Approval Prediction — Production ML System
+
+An end-to-end machine learning system that predicts whether a loan
+application will be approved or rejected. Built with Python, scikit-learn,
+Gradient Boosting, Flask, and Docker.
+
+---
+
 ## Project structure
 
 ```
-loan_approval/
+loan-approval-ml/
 ├── data/
 │   ├── train.csv           # 614 labelled applications (not in git)
 │   ├── test.csv            # 362 unlabelled applications (not in git)
@@ -32,6 +38,8 @@ loan_approval/
 └── README.md
 ```
 
+---
+
 ## Quickstart
 
 ### 1. Clone and install
@@ -45,38 +53,50 @@ pip install -r requirements.txt
 ### 2. Add the data
 
 Place `train.csv` and `test.csv` in the `data/` folder.
+The dataset is available on [Kaggle — Loan Prediction Problem](https://www.kaggle.com/datasets/altruistdelhite04/loan-prediction-problem-dataset).
 
 ### 3. Run the ML pipeline
 
 ```bash
-# Step 1 — compare models
+# Step 1 — compare models (Logistic Regression, Random Forest, Gradient Boosting)
 python src/model_selection.py
 
-# Step 2 — train the winning model
+# Step 2 — train the winning model (Gradient Boosting) and save the pipeline
 python src/train.py
 
-# Step 3 — generate Kaggle submission
+# Step 3 — generate Kaggle submission file
 python src/predict.py
 ```
-### 4. Run the API
+
+### 4. Run the API locally
 
 ```bash
 python api/serve.py
 ```
 
-Then open http://localhost:8000/docs for interactive API docs.
+### 5. Run with Docker
+
+```bash
+# Build
+docker build -t loan-api .
+
+# Run
+docker run -p 8000:8000 loan-api
+
+# Check health
+curl http://localhost:8000/health
+```
 
 ---
 
 ## API endpoints
 
-| Method | Endpoint         | Description                      |
-|--------|------------------|----------------------------------|
-| POST   | `/predict`       | Score a single application       |
-| POST   | `/predict/batch` | Score up to 500 applications     |
-| GET    | `/health`        | Health check + model metadata    |
-| GET    | `/metrics`       | CV performance metrics           |
-| GET    | `/docs`          | Interactive Swagger UI           |
+| Method | Endpoint         | Description                   |
+|--------|------------------|-------------------------------|
+| POST   | `/predict`       | Score a single application    |
+| POST   | `/predict/batch` | Score up to 500 applications  |
+| GET    | `/health`        | Health check + model metadata |
+| GET    | `/metrics`       | CV performance metrics        |
 
 ### Example request
 
@@ -105,68 +125,85 @@ print(response.json())
 
 ```json
 {
-  "loan_status"          : "Y",
-  "approval_probability" : 0.8432,
-  "rejection_probability": 0.1568,
-  "risk_tier"            : "VERY_LOW_RISK",
-  "confidence"           : "HIGH",
-  "model_version"        : "RandomForestClassifier",
-  "inference_ms"         : 12.4
+  "loan_status"           : "Y",
+  "approval_probability"  : 0.8432,
+  "rejection_probability" : 0.1568,
+  "risk_tier"             : "VERY_LOW_RISK",
+  "confidence"            : "HIGH",
+  "model_version"         : "GradientBoostingClassifier",
+  "inference_ms"          : 12.4
 }
 ```
 
 **Risk tiers:**
 
-| Tier          | Probability range | Meaning                    |
-|---------------|-------------------|----------------------------|
-| VERY_LOW_RISK | > 75%             | Strong approval signal     |
-| LOW_RISK      | 50% – 75%         | Approved with confidence   |
-| MODERATE_RISK | 30% – 50%         | Borderline — review needed |
-| HIGH_RISK     | < 30%             | Strong rejection signal    |
+| Tier          | Probability range | Meaning                     |
+|---------------|-------------------|-----------------------------|
+| VERY_LOW_RISK | > 75%             | Strong approval signal      |
+| LOW_RISK      | 50% – 75%         | Approved with confidence    |
+| MODERATE_RISK | 30% – 50%         | Borderline — review needed  |
+| HIGH_RISK     | < 30%             | Strong rejection signal     |
 
 ---
 
 ## Model performance
 
-Three models compared in `model_selection.py` using 5-fold cross-validation:
+Three models compared in `model_selection.py` using 5-fold
+cross-validated OOF predictions on all 614 rows:
 
-| Model               | F1    | ROC-AUC | Accuracy |
-|---------------------|-------|---------|----------|
-| **Random Forest**   | **0.902** | **0.881** | **86.2%** |
-| Gradient Boosting   | 0.891 | 0.843   | 84.6%    |
-| Logistic Regression | 0.835 | 0.887   | 78.9%    |
+| Model                 | ROC-AUC | F1     | Accuracy |
+|-----------------------|---------|--------|----------|
+| **Gradient Boosting** | **0.7629** | **0.8625** | **79.8%** |
+| Random Forest         | 0.7859  | 0.8616 | 79.6%    |
+| Logistic Regression   | 0.7461  | 0.7926 | 72.5%    |
 
-**Random Forest selected** — highest F1 and accuracy.
+**Gradient Boosting selected** — highest F1 on the approved class.
 
-F1 is the primary metric because loan approval has roughly symmetric costs
-between false approvals (bank loses money on default) and false rejections
-(bank loses potential interest income).
+F1 is the primary metric because loan approval has roughly symmetric
+costs between false approvals (bank loses money on default) and
+false rejections (bank loses potential interest income).
+
+### Cross-validated OOF results (n = 614)
+
+| Metric             | Value  |
+|--------------------|--------|
+| ROC-AUC            | 0.7629 |
+| F1 (Approved)      | 0.8625 |
+| Accuracy           | 79.8%  |
+| Decision threshold | 0.50   |
+| Gini Coefficient   | 0.526  |
 
 ---
 
 ## Key design decisions
 
-**Random Forest over Gradient Boosting** — higher F1 (0.902 vs 0.891) and
-higher accuracy (86.2% vs 84.6%). Unlike fraud detection where recall dominates,
-loan approval uses F1 as the primary metric due to the symmetric cost structure.
+**Gradient Boosting over Random Forest** — highest F1 at threshold 0.50.
+The F1 difference is marginal (0.0009) but the declared primary metric
+is respected. Gradient Boosting builds trees sequentially — each tree
+corrects the errors of the previous ones.
 
-**Credit_History missing → category 2.0** — EDA showed applicants with missing
-Credit_History have a 64% approval rate — different from good (79.6%) and bad
-(7.9%). Treating missing as a third category is more informative than imputing
-with the mode.
+**Flask over FastAPI** — demonstrates range across the portfolio.
+The fraud detection project uses FastAPI. Using Flask here shows
+familiarity with both frameworks and the ability to choose the right
+tool for the context.
 
-**SimpleImputer in the Pipeline** — imputation values are learned from training
-data only during fit() and applied consistently to all data during transform().
-This prevents data leakage and makes the imputation values portable — saved
-alongside the model in loan_model.pkl.
+**Credit_History missing → category 2.0** — EDA showed applicants
+with missing Credit_History have a 64% approval rate — different from
+good (79.6%) and bad (7.9%). Treating missing as a third category
+preserves this signal rather than losing it through imputation.
 
-**Threshold fixed at 0.50** — unlike fraud detection where a lower threshold
-is needed to catch the rare 6% fraud rate, loan approval is 69/31 which is
-close enough to balanced that the default 0.50 threshold works well.
+**SimpleImputer inside the Pipeline** — imputation values are learned
+from training data only during fit() and applied consistently at
+inference time. Prevents data leakage and saves imputation values
+alongside the model.
+
+**Threshold fixed at 0.50** — unlike fraud detection where a lower
+threshold is needed for the severe 6% class imbalance, loan approval
+is 69/31 — close enough to balanced that the default threshold works.
 
 **6 engineered features** — TotalIncome, IncomePerLoan, LoanAmount_log,
-TotalIncome_log, Has_Coapplicant, DebtToIncome — all grounded in the business
-logic of loan repayability.
+TotalIncome_log, Has_Coapplicant, DebtToIncome — all grounded in the
+business logic of loan repayability.
 
 ---
 
