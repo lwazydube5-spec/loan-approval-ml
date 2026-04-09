@@ -151,36 +151,41 @@ print(response.json())
 Three models compared in `model_selection.py` using 5-fold
 cross-validated OOF predictions on all 614 rows:
 
-| Model                 | ROC-AUC | F1     | Accuracy |
-|-----------------------|---------|--------|----------|
-| **Gradient Boosting** | **0.7629** | **0.8625** | **79.8%** |
-| Random Forest         | 0.7859  | 0.8616 | 79.6%    |
-| Logistic Regression   | 0.7461  | 0.7926 | 72.5%    |
+| Model               | ROC-AUC   | F1     | Accuracy | Recall | Precision |
+|---------------------|-----------|--------|----------|--------|-----------|
+| **Random Forest**   | **0.7859** | 0.8616 | 79.6%    | 92.2%  | 80.9%     |
+| Gradient Boosting   | 0.7629    | 0.8625 | 79.8%    | 92.2%  | 81.0%     |
+| Logistic Regression | 0.7461    | 0.7926 | 72.5%    | 76.5%  | 82.2%     |
 
 **Gradient Boosting selected** — highest F1 on the approved class.
 
-F1 is the primary metric because loan approval has roughly symmetric
-costs between false approvals (bank loses money on default) and
-false rejections (bank loses potential interest income).
+ROC-AUC is the primary metric because loan approval decisions are
+threshold-based and tied to financial outcomes. A model with better
+ranking ability allows more effective optimisation of approval thresholds
+to maximise profit and minimise losses. The F1 difference between
+Random Forest and Gradient Boosting is 0.0009 — statistically
+insignificant on 614 rows.
 
 ### Cross-validated OOF results (n = 614)
 
 | Metric             | Value  |
 |--------------------|--------|
-| ROC-AUC            | 0.7629 |
-| F1 (Approved)      | 0.8625 |
-| Accuracy           | 79.8%  |
+| ROC-AUC            | 0.7859 |
+| F1 (Approved)      | 0.8616 |
+| Accuracy           | 79.6%  |
+| Recall             | 92.2%  |
 | Decision threshold | 0.50   |
-| Gini Coefficient   | 0.526  |
+| Gini Coefficient   | 0.572  |
 
 ---
 
 ## Key design decisions
 
-**Gradient Boosting over Random Forest** — highest F1 at threshold 0.50.
-The F1 difference is marginal (0.0009) but the declared primary metric
-is respected. Gradient Boosting builds trees sequentially — each tree
-corrects the errors of the previous ones.
+**Random Forest over Gradient Boosting** — higher ROC-AUC (0.7859 vs
+0.7629) despite a marginally lower F1. In loan approval, decisions are
+threshold-based and tied to financial outcomes. A model with better
+ranking ability allows more effective optimisation of approval thresholds.
+The F1 difference of 0.0009 is statistically insignificant on 614 rows.
 
 **Flask over FastAPI** — demonstrates range across the portfolio.
 The fraud detection project uses FastAPI. Using Flask here shows
