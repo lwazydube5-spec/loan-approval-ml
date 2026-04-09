@@ -157,14 +157,7 @@ cross-validated OOF predictions on all 614 rows:
 | Gradient Boosting   | 0.7629    | 0.8625 | 79.8%    | 92.2%  | 81.0%     |
 | Logistic Regression | 0.7461    | 0.7926 | 72.5%    | 76.5%  | 82.2%     |
 
-**Gradient Boosting selected** — highest F1 on the approved class.
-
-ROC-AUC is the primary metric because loan approval decisions are
-threshold-based and tied to financial outcomes. A model with better
-ranking ability allows more effective optimisation of approval thresholds
-to maximise profit and minimise losses. The F1 difference between
-Random Forest and Gradient Boosting is 0.0009 — statistically
-insignificant on 614 rows.
+We selected Random Forest over Gradient Boosting despite their similar performance because it demonstrated stronger overall ranking ability (higher ROC-AUC), which is critical in a loan approval setting where decisions depend on threshold tuning rather than a fixed cutoff. While Gradient Boosting achieved a marginally higher F1-score, both models had identical recall and nearly identical precision, making the difference negligible. The superior ROC-AUC of Random Forest provides greater flexibility to optimize decision thresholds for business outcomes, such as minimizing default risk while maintaining a healthy approval rate.
 
 ### Cross-validated OOF results (n = 614)
 
